@@ -5,14 +5,31 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"strings"
 )
 
 func main() {
-	
+	sig, err := sha1sum("http.log.gz")
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	fmt.Printf("%s\n", sig)
+
+	sig, err = sha1sum("sha1.go")
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	fmt.Printf("%s\n", sig)
 }
 
-// cat http.log.gz| gunzip |sha1sum
+/*
+if file names ends with .gz
+	$ cat http.log.gz| gunzip | sha1sum
+else
+	$ cat http.log.gz| sha1sum
+*/
 func sha1sum(fileName string ) (string, error){
 	//os.Open opens the file in the filesystem
 	file, err := os.Open(fileName)
@@ -28,9 +45,15 @@ func sha1sum(fileName string ) (string, error){
 	*/
 	defer file.Close()
 	//create a file that can be read(unzips the file)
-	r, err := gzip.NewReader(file)
-	if err != nil{
-		return "", err
+	var r io.Reader = file
+
+	if strings.HasSuffix(fileName, ".gz") {
+		gz, err := gzip.NewReader(file)
+		if err != nil {
+			return "", err
+		}
+		defer gz.Close()
+		r = gz
 	}
 	w := sha1.New()
 
